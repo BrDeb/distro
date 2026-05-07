@@ -4,3 +4,6 @@
 [submodule "config/includes.chroot/usr/share/backgrounds"]
 	path = config/includes.chroot/usr/share/backgrounds
 	url = https://github.com/BrDeb/usr_share_backgrounds
+[submodule "config/includes.installer"]
+	path = config/includes.installer
+	url = https://github.com/BrDeb/includes.installer/
