@@ -7,3 +7,6 @@
 [submodule "config/includes.installer"]
 	path = config/includes.installer
 	url = https://github.com/BrDeb/includes.installer/
+[submodule "config/package-lists"]
+	path = config/package-lists
+	url = https://github.com/BrDeb/config_package-lists
