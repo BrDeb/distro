@@ -1,0 +1,6 @@
+[submodule "lb-config"]
+	path = lb-config
+	url = https://github.com/BrDeb/lb_config_brdeb
+[submodule "config/includes.chroot/usr/share/backgrounds"]
+	path = config/includes.chroot/usr/share/backgrounds
+	url = https://github.com/BrDeb/usr_share_backgrounds
