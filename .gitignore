@@ -1,0 +1,25 @@
+# Ignore build artifacts and caches
+/binary*
+/cache*
+/chroot*
+/.build*
+/build.log
+
+# Ignore stage/lock files
+.lock
+.mirror
+.stage
+
+# Ignore package lists generated during the build
+chroot.files
+chroot.packages.install
+chroot.packages.live
+
+# Ignore auto-scripts state
+/auto/*
+
+# Ignore Debian Live config auto-generated content
+/config/binary
+/config/bootstrap
+/config/chroot
+/config/common
