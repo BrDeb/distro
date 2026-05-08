@@ -2,7 +2,7 @@
 	path = lb-config
 	url = https://github.com/BrDeb/lb_config_brdeb
 [submodule "config/includes.chroot/usr/share/wallpapers"]
-	path = config/includes.chroot/usr/share/wallpapers
+	path = config/includes.chroot_after_packages/usr/share/wallpapers
 	url = https://github.com/BrDeb/usr_share_wallpapers
 [submodule "config/includes.installer"]
 	path = config/includes.installer
