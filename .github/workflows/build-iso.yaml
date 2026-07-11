@@ -1,0 +1,118 @@
+name: Build BrDeb ISO
+
+# Dispara em qualquer commit de qualquer branch, e também permite
+# rodar manualmente a partir de um commit/branch/tag específico.
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Commit SHA, branch ou tag para buildar (vazio = usa o ref do evento)'
+        required: false
+        default: ''
+      upload_artifact:
+        description: 'Enviar a ISO como artefato do workflow?'
+        type: boolean
+        required: false
+        default: true
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240 # builds de ISO live podem demorar bastante
+
+    # A VM do runner continua sendo Ubuntu, mas todos os steps abaixo
+    # rodam DENTRO deste container Debian real (isolado do host).
+    # "stable-slim" acompanha automaticamente a Debian stable atual,
+    # o que casa com o --distribution stable usado no lb_config_brdeb.sh.
+    container:
+      image: debian:stable-slim
+      options: --privileged   # necessário: lb build faz chroot/mount/losetup
+
+    steps:
+      - name: Instalar git e pré-requisitos (imagem slim não vem com eles)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+
+      - name: Checkout do repositório (com submódulos)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.sha }}
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Instalar dependências do live-build
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            live-build squashfs-tools live-boot live-config \
+            xorriso isolinux dosfstools mtools
+
+      - name: Gerar configuração (lb config via script do lb-config)
+        run: |
+          chmod +x lb-config/lb_config_brdeb.sh
+          lb-config/lb_config_brdeb.sh
+
+      - name: Buildar a ISO (lb build)
+        # já estamos como root dentro do container, sem precisar de sudo
+        # 'pipefail' garante que, se o lb build falhar, o step falhe também
+        # (sem isso, o "| tee" mascarava o exit code e o upload rodava vazio)
+        shell: bash
+        run: |
+          set -o pipefail
+          lb build 2>&1 | tee lb-build.log
+
+      - name: Conferir se a ISO foi gerada (debug)
+        if: always()
+        run: |
+          echo "Arquivos .iso encontrados:"
+          find . -maxdepth 2 -name '*.iso' -print || echo "Nenhuma ISO encontrada."
+
+      - name: Upload do log de build
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lb-build-log
+          path: lb-build.log
+          retention-days: 7
+
+      - name: Upload da ISO gerada
+        if: success() && (github.event_name != 'workflow_dispatch' || github.event.inputs.upload_artifact != 'false')
+        uses: actions/upload-artifact@v4
+        with:
+          name: BrDeb-amd64.hybrid.iso
+          path: '*.iso'
+          if-no-files-found: error
+          retention-days: 14
+
+  upload-ftp:
+    needs: build-iso
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Baixar ISO gerada no job anterior
+        uses: actions/download-artifact@v4
+        with:
+          name: BrDeb-amd64.hybrid.iso
+          path: ./dist
+
+      - name: Instalar lftp
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends lftp
+
+      - name: Upload via FTP (substitui ISO antiga em /misc/)
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          chmod +x scripts/upload_iso_ftp.sh
+          source scripts/upload_iso_ftp.sh
+          ISO_FILE=$(find ./dist -name '*.iso' | head -n1)
+          upload_iso_ftp "$FTP_HOST" "$FTP_USER" "$FTP_PASSWORD" "/lucas/misc/" "$ISO_FILE"
