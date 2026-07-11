@@ -1,4 +1,7 @@
 name: Build BrDeb ISO
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 # Dispara em qualquer commit de qualquer branch, e também permite
 # rodar manualmente a partir de um commit/branch/tag específico.
@@ -21,7 +24,7 @@ on:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
-    timeout-minutes: 240 # builds de ISO live podem demorar bastante
+    timeout-minutes: 15 # builds de ISO live podem demorar bastante
 
     # A VM do runner continua sendo Ubuntu, mas todos os steps abaixo
     # rodam DENTRO deste container Debian real (isolado do host).
